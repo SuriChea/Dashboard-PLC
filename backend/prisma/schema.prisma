@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum TankStatus {
+  NORMAL
+  WARNING
+  CRITICAL
+}
+
+enum LeakStatus {
+  CLEAR
+  DETECTED
+}
+
+enum PumpStatus {
+  ON
+  OFF
+  FAULT
+}
+
+enum ControlMode {
+  AUTO
+  MANUAL
+}
+
+enum DataSource {
+  MOCK
+  DEVICE
+}
+
+enum PumpAction {
+  START
+  STOP
+  FAULT
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+model Building {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  location  String?
+  createdAt DateTime @default(now())
+}
+
+model WaterTank {
+  id                  String     @id @default(auto()) @map("_id") @db.ObjectId
+  buildingId          String     @db.ObjectId
+  tankName            String
+  capacityLiter       Float
+  currentLevelLiter   Float
+  currentLevelPercent Float
+  status              TankStatus @default(NORMAL)
+  leakStatus          LeakStatus @default(CLEAR)
+  updatedAt           DateTime   @updatedAt
+}
+
+model Pump {
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  buildingId     String      @db.ObjectId
+  pumpName       String
+  pumpCode       String      @unique
+  status         PumpStatus  @default(OFF)
+  controlMode    ControlMode @default(AUTO)
+  flowRate       Float       @default(0)
+  operatingHours Float       @default(0)
+  isOnline       Boolean     @default(true)
+  updatedAt      DateTime    @updatedAt
+}
+
+model SensorReading {
+  id                String     @id @default(auto()) @map("_id") @db.ObjectId
+  tankId            String     @db.ObjectId
+  waterLevel        Float
+  waterLevelPercent Float
+  flowRate          Float      @default(0)
+  temperature       Float?
+  leakDetected      Boolean    @default(false)
+  source            DataSource @default(DEVICE)
+  recordedAt        DateTime   @default(now())
+
+  @@index([tankId, recordedAt])
+}
+
+model DailyWaterUsage {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  date              DateTime
+  buildingId        String   @db.ObjectId
+  totalUsageLiter   Float    @default(0)
+  averageFlowRate   Float    @default(0)
+  peakFlowRate      Float    @default(0)
+  estimatedCost     Float    @default(0)
+  createdAt         DateTime @default(now())
+
+  @@unique([date, buildingId])
+}
+
+model MonthlyWaterBill {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  month             Int
+  year              Int
+  totalUsageLiter   Float    @default(0)
+  totalUsageM3      Float    @default(0)
+  totalCost         Float    @default(0)
+  averageDailyUsage Float    @default(0)
+  buildingBreakdown Json
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([month, year])
+}
+
+model PumpLog {
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
+  pumpId          String      @db.ObjectId
+  buildingId      String      @db.ObjectId
+  action          PumpAction
+  controlMode     ControlMode
+  reason          String
+  flowRate        Float       @default(0)
+  startedAt       DateTime?
+  stoppedAt       DateTime?
+  durationMinutes Float?
+  createdAt       DateTime    @default(now())
+
+  @@index([pumpId, createdAt])
+}
+
+model Alert {
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  buildingId     String?       @db.ObjectId
+  tankId         String?       @db.ObjectId
+  pumpId         String?       @db.ObjectId
+  alertType      String
+  severity       AlertSeverity
+  message        String
+  isAcknowledged Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+}
+
+model SystemSettings {
+  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
+  waterPricePerM3       Float    @default(18)
+  lowWaterThreshold     Float    @default(60)
+  criticalWaterThreshold Float   @default(30)
+  autoStartThreshold    Float    @default(30)
+  autoStopThreshold     Float    @default(80)
+  emergencyStop         Boolean  @default(false)
+  updatedAt             DateTime @updatedAt
+}
