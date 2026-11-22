@@ -62,7 +62,23 @@ model WaterTank {
   currentLevelPercent Float
   status              TankStatus @default(NORMAL)
   leakStatus          LeakStatus @default(CLEAR)
+  pressureKpa         Float?
+  lowLevelSwitch      Boolean?
+  highLevelSwitch     Boolean?
+  lastSeenAt          DateTime?
   updatedAt           DateTime   @updatedAt
+}
+
+model FlowMeter {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  buildingId      String   @db.ObjectId
+  meterCode       String   @unique
+  meterName       String
+  flowRateLpm     Float    @default(0)
+  totalizerLiter  Float?
+  isOnline        Boolean  @default(true)
+  lastSeenAt      DateTime?
+  updatedAt       DateTime @updatedAt
 }
 
 model Pump {
@@ -74,22 +90,65 @@ model Pump {
   controlMode    ControlMode @default(AUTO)
   flowRate       Float       @default(0)
   operatingHours Float       @default(0)
+  currentA       Float?
+  voltageV       Float?
+  powerFactor    Float?
+  activePowerKw  Float?
+  energyKwh      Float?
+  faultCode      String?
   isOnline       Boolean     @default(true)
+  lastSeenAt     DateTime?
   updatedAt      DateTime    @updatedAt
 }
 
 model SensorReading {
   id                String     @id @default(auto()) @map("_id") @db.ObjectId
   tankId            String     @db.ObjectId
-  waterLevel        Float
-  waterLevelPercent Float
-  flowRate          Float      @default(0)
+  deviceId          String?
+  waterLevel        Float?
+  waterLevelPercent Float?
+  pressureKpa       Float?
+  lowLevelSwitch    Boolean?
+  highLevelSwitch   Boolean?
+  flowRate          Float?
+  flowTotalizerLiter Float?
   temperature       Float?
-  leakDetected      Boolean    @default(false)
+  leakDetected      Boolean?
   source            DataSource @default(DEVICE)
   recordedAt        DateTime   @default(now())
 
   @@index([tankId, recordedAt])
+}
+
+model FlowReading {
+  id             String     @id @default(auto()) @map("_id") @db.ObjectId
+  flowMeterId    String     @db.ObjectId
+  deviceId       String?
+  flowRateLpm    Float?
+  totalizerLiter Float?
+  source         DataSource @default(DEVICE)
+  recordedAt     DateTime   @default(now())
+
+  @@index([flowMeterId, recordedAt])
+}
+
+model PumpReading {
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
+  pumpId          String      @db.ObjectId
+  deviceId        String?
+  status          PumpStatus?
+  flowRate        Float?
+  currentA        Float?
+  voltageV        Float?
+  powerFactor     Float?
+  activePowerKw   Float?
+  energyKwh       Float?
+  faultCode       String?
+  overcurrent     Boolean?
+  source          DataSource  @default(DEVICE)
+  recordedAt      DateTime   @default(now())
+
+  @@index([pumpId, recordedAt])
 }
 
 model DailyWaterUsage {

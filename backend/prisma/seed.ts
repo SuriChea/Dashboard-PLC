@@ -83,6 +83,22 @@ async function seed() {
   }
 
   const now = new Date();
+  const flowMeterRates = [4.5, 2, 2.5, 3, 3.5];
+  const flowMeters = [];
+  for (let index = 0; index < buildings.length; index += 1) {
+    flowMeters.push(await prisma.flowMeter.create({
+      data: {
+        buildingId: buildings[index].id,
+        meterCode: `FM-${["MB", "LB", "EN", "SC", "DM"][index]}-IN`,
+        meterName: `${buildings[index].name} inlet meter`,
+        flowRateLpm: flowMeterRates[index],
+        totalizerLiter: 250000 + index * 10000,
+        lastSeenAt: now,
+      },
+    }));
+  }
+  const totalizers = flowMeters.map((meter, index) => meter.totalizerLiter ?? 250000 + index * 10000);
+
   for (let dayOffset = 29; dayOffset >= 0; dayOffset -= 1) {
     const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - dayOffset));
     for (let index = 0; index < buildings.length; index += 1) {
@@ -134,6 +150,26 @@ async function seed() {
 
   for (let hourOffset = 23; hourOffset >= 0; hourOffset -= 1) {
     const recordedAt = new Date(now.getTime() - hourOffset * 60 * 60 * 1000);
+    for (let index = 0; index < flowMeters.length; index += 1) {
+      const flowRateLpm = Math.round(flowMeterRates[index] * (0.82 + Math.random() * 0.36) * 100) / 100;
+      totalizers[index] += flowRateLpm * 60;
+      await prisma.flowReading.create({
+        data: {
+          flowMeterId: flowMeters[index].id,
+          deviceId: "development-seed",
+          flowRateLpm,
+          totalizerLiter: totalizers[index],
+          source: "MOCK",
+          recordedAt,
+        },
+      });
+      if (hourOffset === 0) {
+        await prisma.flowMeter.update({
+          where: { id: flowMeters[index].id },
+          data: { flowRateLpm, totalizerLiter: totalizers[index], lastSeenAt: recordedAt },
+        });
+      }
+    }
     for (let index = 0; index < tankRecords.length; index += 1) {
       const tank = tankRecords[index];
       const waterLevelPercent = Math.min(98, Math.max(20, tank.currentLevelPercent - hourOffset * 0.16 + Math.random() * 2));

@@ -17,6 +17,24 @@ export function calculateUsageLiter(
   return ((previousFlowRate + currentFlowRate) / 2) * elapsedMinutes;
 }
 
+export function calculateTotalizerFlowRate(
+  previousTotalizerLiter: number,
+  currentTotalizerLiter: number,
+  elapsedMilliseconds: number,
+) {
+  if (
+    !Number.isFinite(previousTotalizerLiter) ||
+    !Number.isFinite(currentTotalizerLiter) ||
+    !Number.isFinite(elapsedMilliseconds) ||
+    previousTotalizerLiter < 0 ||
+    currentTotalizerLiter < previousTotalizerLiter ||
+    elapsedMilliseconds <= 0
+  ) {
+    throw new Error("Totalizer readings must be non-decreasing with a positive time interval");
+  }
+  return (currentTotalizerLiter - previousTotalizerLiter) / (elapsedMilliseconds / 60000);
+}
+
 export function splitUsageByUtcDay(start: Date, end: Date, averageFlowRate: number) {
   const startTime = start.getTime();
   const endTime = end.getTime();
