@@ -1,0 +1,4 @@
+html, body, #root { min-height: 100%; margin: 0; }
+body { background: #f7f9fc; color: #17243b; font-family: "Segoe UI", Inter, -apple-system, BlinkMacSystemFont, sans-serif; font-size: 12px; -webkit-font-smoothing: antialiased; }
+button { font-family: inherit; }
+::selection { color: #1d5fcf; background: #e1edff; }
